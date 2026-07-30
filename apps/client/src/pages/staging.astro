@@ -1,0 +1,8 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import GenerationPage from '@/components/generation/GenerationPage';
+---
+
+<Layout title="Staging - Artistic QR Code Generator">
+  <GenerationPage client:load environment="staging" />
+</Layout>

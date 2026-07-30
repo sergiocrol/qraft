@@ -1,0 +1,84 @@
+{
+  "facts": [
+    {
+      "title": "QR Code History",
+      "content": "QR codes were invented in 1994 by Denso Wave in Japan for tracking automotive parts in Toyota's manufacturing process.",
+      "icon": "history"
+    },
+    {
+      "title": "Scanning Distance",
+      "content": "For best results, hold your phone min 20-30 cms away from the QR code. Too close often causes focus issues!",
+      "icon": "camera"
+    },
+    {
+      "title": "Storage Capacity",
+      "content": "A single QR code can store up to 3,000 alphanumeric characters - that's about half a page of text!",
+      "icon": "database"
+    },
+    {
+      "title": "Error Correction",
+      "content": "QR codes can still work perfectly even if up to 30% of the code is damaged, dirty, or artistically modified.",
+      "icon": "shield"
+    },
+    {
+      "title": "Global Usage",
+      "content": "Over 11 million QR codes are scanned daily worldwide, making them one of the most used digital technologies.",
+      "icon": "globe"
+    },
+    {
+      "title": "Art Integration",
+      "content": "Artistic QR codes maintain functionality while embedding logos, colors, and creative designs within the pattern.",
+      "icon": "palette"
+    },
+    {
+      "title": "Speed Reading",
+      "content": "Modern smartphones can decode a QR code in less than 0.5 seconds using advanced computer vision algorithms.",
+      "icon": "zap"
+    },
+    {
+      "title": "Future Tech",
+      "content": "QR codes are evolving with 3D versions, animated codes, and AI-enhanced designs for better user experiences.",
+      "icon": "cpu"
+    },
+    {
+      "title": "Moon Landing",
+      "content": "In 2019, SpaceIL's Beresheet lunar mission carried QR codes containing Wikipedia pages to the Moon - making them the first codes to leave Earth!",
+      "icon": "rocket"
+    },
+    {
+      "title": "Grave Memorials",
+      "content": "Some modern cemeteries use QR codes on tombstones that link to digital memorials, photos, and life stories of the deceased.",
+      "icon": "heart"
+    },
+    {
+      "title": "Restaurant Revolution",
+      "content": "COVID-19 accelerated QR menu adoption by 750% - from novelty to necessity in just months, transforming the dining industry forever.",
+      "icon": "utensils"
+    },
+    {
+      "title": "Massive Scale",
+      "content": "The world's largest functional QR code covers 29,000 square meters in a Canadian corn maze - visible from aircraft and satellites!",
+      "icon": "maximize"
+    },
+    {
+      "title": "Wedding Innovation",
+      "content": "Modern couples embed QR codes in wedding invitations linking to photo albums, gift registries, and live ceremony streams for remote guests.",
+      "icon": "gift"
+    },
+    {
+      "title": "Street Art Security",
+      "content": "Banksy and other artists hide QR codes in murals that authenticate artwork and link to exclusive content, fighting art forgery.",
+      "icon": "brush"
+    },
+    {
+      "title": "Medical Lifesaver",
+      "content": "Emergency medical QR bracelets can instantly share critical health info, allergies, and emergency contacts with first responders.",
+      "icon": "cross"
+    },
+    {
+      "title": "Time Capsule Tech",
+      "content": "The 2020 Tokyo Olympics buried QR codes in time capsules containing messages from athletes - to be opened in 2070!",
+      "icon": "clock"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+---
+// Bundled by Astro/Vite into a content-hashed stylesheet. Never serve this
+// file from a stable URL (the old /styles/global.css <link>): browsers and
+// CloudFront cached it for a year and CSS changes stopped propagating.
+import '../styles/global.css';
+
+export interface Props {
+  title: string;
+  description?: string;
+}
+
+const {
+  title,
+  description = 'Turn a link and a prompt into scannable art, painted around your QR code by a diffusion model.',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+
+    <!-- Google Fonts — "Gallery, Alive" -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+  </head>
+  <body class="bg-cream font-sans text-ink">
+    <slot />
+  </body>
+</html>

@@ -1,0 +1,45 @@
+{
+  "name": "@repo/shared-types",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./qr-generation": {
+      "types": "./dist/qr-generation/index.d.ts",
+      "import": "./dist/qr-generation/index.js",
+      "require": "./dist/qr-generation/index.js",
+      "default": "./dist/qr-generation/index.js"
+    },
+    "./api": {
+      "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js",
+      "require": "./dist/api/index.js",
+      "default": "./dist/api/index.js"
+    },
+    "./system": {
+      "types": "./dist/system/index.d.ts",
+      "import": "./dist/system/index.js",
+      "require": "./dist/system/index.js",
+      "default": "./dist/system/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "@repo/qr-constants": "workspace:*"
+  }
+}

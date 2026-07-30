@@ -1,0 +1,38 @@
+# eval/prompts.txt — fixed prompt set for the plan-008 QR quality eval (Phase 0).
+#
+# Consumed by eval/run_eval.py (Phase 6): every prompt is generated for each
+# pipeline ({v1, v2}) x each seed below, then decoded with
+# app/utils/scan_verifier.py to compute the Scanning Success Rate (SSR).
+#
+# QR_CONTENT: https://qraft.ai/e2e
+# SEEDS: 1001, 2002, 3003
+#
+# Line format: <style_preset>|<prompt>
+#   <style_preset> is one of the app/presets.py keys
+#   (illustration, photo, cyberpunk, watercolor, architecture, none).
+#   Blank lines and lines starting with '#' are ignored.
+#
+# NOTE (Phase 0, 2026-07-04): eval/baseline_v1.json (the v1 SSR baseline that
+# is the promotion gate's denominator) is DEFERRED — it requires a GPU run of
+# the current image (`make dev-controlnet` + this prompt set), which the
+# authoring machine cannot do. Generate it on the GPU dev box before Phase 6.
+illustration|A cozy mountain village at dusk with warm lantern light and winding stone paths, storybook illustration
+illustration|A fox curled up in a bed of autumn leaves under a giant oak tree, whimsical children's book art
+illustration|A tiny airship docking at a floating island market, detailed fantasy illustration
+illustration|A lighthouse keeper reading by candlelight during a storm, flat color illustration with strong shapes
+photo|An overhead shot of a rustic wooden table with fresh bread, herbs and linen napkins, food photography
+photo|A misty pine forest at sunrise with rays of light between the trees, landscape photography
+photo|A weathered fishing boat moored in a calm harbor at golden hour, documentary photography
+photo|Close-up of moss and lichen covering ancient stone ruins after rain, macro photography
+cyberpunk|A rain-slick neon alley in a megacity with holographic signage and steam vents
+cyberpunk|A cybernetic street market at night, vendors under glowing tarps, dense wiring overhead
+cyberpunk|A lone courier on a light-trail motorcycle crossing an elevated highway above a neon grid
+watercolor|A field of wildflowers bending in the wind under a pale spring sky, loose watercolor washes
+watercolor|Koi fish circling beneath lily pads in a garden pond, delicate watercolor painting
+watercolor|A quiet canal town with laundry lines strung between pastel houses, watercolor travel sketch
+architecture|A brutalist concrete library with deep window recesses casting strong geometric shadows
+architecture|A spiral staircase in a historic tower, wrought iron railing, dramatic top-down light
+architecture|A desert monastery of stacked adobe cubes glowing at sunset
+none|A tabby cat sleeping on a sunlit windowsill among potted plants
+none|A hot air balloon festival over patchwork farmland at dawn
+none|A snow-covered temple garden with a single red maple tree

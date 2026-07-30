@@ -1,0 +1,32 @@
+/* Qraft.ai — "Gallery, Alive" design tokens.
+   Imported by Layout.astro and bundled into the content-hashed stylesheet. */
+
+:root {
+  --cream: #f6efe1;
+  --paper: #fffcf4;
+  --ink: #201a14;
+  --blue: #2e49c9;
+  --blue-hover: #4661e0;
+  --red: #e2512b;
+  --red-hover: #c43f1d;
+  --yellow: #f2b63c;
+  --green: #3c9e68;
+  --green-light: #9fe8be;
+  --muted: #6e6557;
+  --faint: #8a8172;
+  --hairline: #e3d9c4;
+  --dash: #b8ad98;
+}
+
+body {
+  background-color: var(--cream);
+  color: var(--ink);
+  font-family: 'Instrument Sans', sans-serif;
+}
+
+/* Marker highlight — one accent word per heading (italic serif span). */
+.marker {
+  background: linear-gradient(transparent 58%, #f2b63c 58%);
+  padding: 0 6px;
+  font-style: italic;
+}

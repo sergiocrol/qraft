@@ -1,0 +1,91 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv*
+
+# Model files and outputs
+*.pt
+*.pth
+*.bin
+*.onnx
+*.safetensors
+results/*
+!qrs/.gitkeep
+test_response.json
+
+# Test/ops artifacts that can contain live job tokens or account data
+api_server_response.json
+apps/controlnet/eval/results.json
+
+# Archives — keep binary zips out of the repo
+*.zip
+
+# Hugging Face cache
+.cache/
+.huggingface/
+
+# Netlify CLI local link/state
+.netlify/
+
+# Turborepo
+.turbo/
+node_modules/
+.next/
+dist/
+build/
+
+*.build/
+*.rollup.chache
+*.serverless
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Environment files
+.env
+.env.v2
+.env.local
+.env.production
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Log files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Secrets and credentials
+**/credentials.json
+**/secrets.json
+**/token.json
+**/config.json
+
+# Deployment artifacts (contain AWS account IDs and resource URIs)
+**/deployment_info.json
+**/deployment_info_staging.json
+
+# Cursor
+.cursor/
+
+# Claude
+.claude/

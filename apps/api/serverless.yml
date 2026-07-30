@@ -1,0 +1,225 @@
+service: qr-controlnet-api
+
+# Load apps/api/.env at deploy time so ${env:...} fallbacks (e.g. CLIENT_URL,
+# used in the activation-request email's admin-panel link) resolve to real
+# values instead of their localhost defaults.
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ${env:AWS_REGION, 'eu-west-1'}
+  stage: ${opt:stage, 'prod'}
+  deploymentBucket: ${env:SLS_DEPLOYMENT_BUCKET}
+
+  # Performance settings
+  memorySize: 1024
+  timeout: 30
+
+  # Environment variables
+  environment:
+    NODE_ENV: production
+    CONTROLNET_ENDPOINT: ${env:CONTROLNET_ENDPOINT}
+    LOG_LEVEL: ${env:LOG_LEVEL, 'info'}
+    ALLOWED_ORIGINS: ${env:ALLOWED_ORIGINS}
+    HOST: ${env:HOST, '0.0.0.0'}
+    PORT: ${env:PORT, '3001'}
+
+    # Job management settings for Lambda
+    JOB_CLEANUP_INTERVAL_MS: ${env:JOB_CLEANUP_INTERVAL_MS, '3600000'}
+    MAX_JOB_AGE_MS: ${env:MAX_JOB_AGE_MS, '1800000'}
+    COMPLETED_JOB_RETENTION_MS: ${env:COMPLETED_JOB_RETENTION_MS, '1800000'}
+    FAILED_JOB_RETENTION_MS: ${env:FAILED_JOB_RETENTION_MS, '3600000'}
+
+    # Timeouts optimized for Lambda
+    REQUEST_TIMEOUT: ${env:REQUEST_TIMEOUT, '25000'}
+    CONTROLNET_TIMEOUT: ${env:CONTROLNET_TIMEOUT, '300000'}
+    HEALTH_CHECK_TIMEOUT: ${env:HEALTH_CHECK_TIMEOUT, '5000'}
+
+    S3_BUCKET_NAME: ${env:S3_BUCKET_NAME}
+    S3_USER_QR_PREFIX: ${env:S3_USER_QR_PREFIX, 'user-qr-codes/generated'}
+    S3_OUTPUT_PREFIX: ${env:S3_OUTPUT_PREFIX, 'output'}
+    S3_INPUT_PREFIX: ${env:S3_INPUT_PREFIX, 'inputs'}
+    S3_PUBLIC_DOMAIN: ${env:S3_PUBLIC_DOMAIN}
+    # Async invocation records written by the relay Lambda / SageMaker —
+    # joined by GET /api/gallery/examples to serve real prompt+image pairs.
+    S3_ASYNC_INPUT_PREFIX: ${env:S3_ASYNC_INPUT_PREFIX, 'controlnet-qr-inputs'}
+    S3_ASYNC_OUTPUT_PREFIX: ${env:S3_ASYNC_OUTPUT_PREFIX, 'controlnet-qr-outputs'}
+
+    # Admin API token
+    ADMIN_SECRET: ${ssm:/qr-controlnet/production/ADMIN_SECRET}
+    JWT_SECRET: ${ssm:/qr-controlnet/production/JWT_SECRET}
+
+    # SageMaker endpoint configuration
+    SAGEMAKER_ENDPOINT_NAME: ${env:SAGEMAKER_ENDPOINT_NAME}
+    SAGEMAKER_STAGING_ENDPOINT_NAME: ${env:SAGEMAKER_STAGING_ENDPOINT_NAME}
+
+    # DynamoDB
+    DYNAMODB_TABLE_NAME: ${self:service}-${self:provider.stage}-jobs
+
+    # Email configuration
+    EMAIL_PROVIDER: ses
+    ADMIN_EMAIL: ${ssm:/qr-controlnet/production/ADMIN_EMAIL}
+    EMAIL_FROM: ${ssm:/qr-controlnet/production/EMAIL_FROM}
+    CLIENT_URL: ${env:CLIENT_URL, 'http://localhost:3000'}
+
+  # IAM permissions for accessing SageMaker and S3
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - sagemaker:InvokeEndpoint
+        - sagemaker:InvokeEndpointAsync
+        - sagemaker:DescribeEndpoint
+        - sagemaker:UpdateEndpoint
+        - sagemaker:UpdateEndpointWeightsAndCapacities
+        - sagemaker:DescribeEndpointConfig
+        - sagemaker:CreateEndpointConfig
+        - cloudwatch:PutMetricAlarm
+        - cloudwatch:DeleteAlarms
+        - cloudwatch:DescribeAlarms
+      Resource:
+        - !Sub "arn:aws:sagemaker:${aws:region}:${aws:accountId}:endpoint/${self:provider.environment.SAGEMAKER_ENDPOINT_NAME}"
+        - !Sub "arn:aws:sagemaker:${aws:region}:${aws:accountId}:endpoint/${self:provider.environment.SAGEMAKER_STAGING_ENDPOINT_NAME}"
+        - "arn:aws:sagemaker:${aws:region}:${aws:accountId}:endpoint-config/controlnet-qr-*"
+        - "arn:aws:cloudwatch:${aws:region}:${aws:accountId}:alarm:*"
+
+    - Effect: Allow
+      Action:
+        - application-autoscaling:RegisterScalableTarget
+        - application-autoscaling:DeregisterScalableTarget
+        - application-autoscaling:DescribeScalableTargets
+        - application-autoscaling:PutScalingPolicy
+        - application-autoscaling:DescribeScalingPolicies
+      Resource: "*"
+
+    - Effect: Allow
+      Action:
+        - s3:PutObject
+        - s3:PutObjectAcl
+        - s3:GetObject
+        - s3:DeleteObject
+        - s3:ListBucket
+      Resource:
+        - !Sub "arn:aws:s3:::${self:provider.environment.S3_BUCKET_NAME}"
+        - !Sub "arn:aws:s3:::${self:provider.environment.S3_BUCKET_NAME}/*"
+
+    - Effect: Allow
+      Action:
+        - logs:CreateLogGroup
+        - logs:CreateLogStream
+        - logs:PutLogEvents
+      Resource: "*"
+
+    - Effect: Allow
+      Action:
+        - ssm:GetParameter
+        - ssm:GetParameters
+      Resource:
+        - arn:aws:ssm:${aws:region}:${aws:accountId}:parameter/qr-controlnet/production/*
+
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+        - dynamodb:GetItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:Query
+        - dynamodb:Scan
+      Resource:
+        - !GetAtt JobsTable.Arn
+        - !Sub "${JobsTable.Arn}/index/*"
+
+    - Effect: Allow
+      Action:
+        - ses:SendEmail
+        - ses:SendRawEmail
+      Resource: "*"
+
+    - Effect: Allow
+      Action:
+        - kms:Decrypt
+      Resource: "*"
+      Condition:
+        StringEquals:
+          kms:ViaService: "ssm.${aws:region}.amazonaws.com"
+
+# Use ESBuild with proper workspace resolution
+build:
+  esbuild:
+    bundle: true
+    minify: false
+    target: "node18"
+    format: "cjs"
+    platform: "node"
+    external:
+      - "aws-sdk"
+      - "aws-lambda"
+      - "@aws-sdk/client-ses"
+    plugins: []
+
+functions:
+  api:
+    handler: src/lambda.handler
+    name: ${self:service}-${self:provider.stage}-api
+    description: QR ControlNet REST API
+    timeout: 30
+
+    events:
+      # Catch all API routes
+      - httpApi:
+          path: /{proxy+}
+          method: "*"
+
+      # Handle root path
+      - httpApi:
+          path: /
+          method: "*"
+
+  scheduledScaler:
+    handler: src/cron.scheduledScaler
+    name: ${self:service}-${self:provider.stage}-scaler
+    description: Scheduled check for SageMaker scaling suspension
+    timeout: 30
+    events:
+      - schedule: rate(10 minutes)
+
+plugins:
+  - serverless-offline
+
+resources:
+  Resources:
+    JobsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:service}-${self:provider.stage}-jobs
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: status
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        GlobalSecondaryIndexes:
+          - IndexName: status-createdAt-index
+            KeySchema:
+              - AttributeName: status
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+custom:
+  serverless-offline:
+    httpPort: 3001
+    host: 0.0.0.0
+    stage: local
+    printOutput: true
+    noAuth: true
+    noEnvironment: false
+    corsAllowOrigin: "*"
+    corsAllowHeaders: "accept,content-type,x-api-key,authorization,x-request-id,x-job-token"
+    corsAllowCredentials: false

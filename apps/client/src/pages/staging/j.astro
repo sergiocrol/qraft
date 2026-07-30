@@ -1,0 +1,8 @@
+---
+import Layout from '@/layouts/Layout.astro';
+import JobPage from '@/components/generation/JobPage';
+---
+
+<Layout title="Staging - Your QR Code - Artistic QR Generator">
+  <JobPage client:load environment="staging" />
+</Layout>

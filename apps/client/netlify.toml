@@ -1,0 +1,28 @@
+# Netlify site config for the Astro client.
+#
+# Primary deploy path is the Makefile target `deploy-client-netlify`, which
+# builds the workspace + client locally and uploads the finished dist/ via the
+# Netlify CLI. This file declares the publish directory and cache headers so the
+# result is correct whether it is deployed by CLI or (optionally) by Netlify's
+# own git-connected build.
+#
+# NOTE: PUBLIC_API_URL is baked into the bundle at build time. For CLI deploys it
+# comes from apps/client/.env. If you ever switch to Netlify git-connected builds,
+# set PUBLIC_API_URL in the Netlify UI (Site settings → Environment variables) and
+# give it a monorepo-aware build command — it is intentionally NOT hardcoded here.
+
+[build]
+  publish = "dist"
+
+# Content-hashed assets (Astro emits these under /_astro/) never change contents
+# for a given URL, so they can be cached forever.
+[[headers]]
+  for = "/_astro/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Un-hashed, stable-URL assets must be revalidated so a redeploy is picked up.
+[[headers]]
+  for = "/styles/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

@@ -1,0 +1,9 @@
+{
+  "extends": "@repo/typescript-config/library.json",
+  "compilerOptions": {
+    "lib": ["ES2020", "DOM"],
+    "outDir": "dist"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+}

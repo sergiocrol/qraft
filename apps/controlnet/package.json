@@ -1,0 +1,11 @@
+{
+  "name": "controlnet",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "venv/bin/python serve.py",
+    "start": "venv/bin/python serve.py",
+    "docker:build": "docker build -t controlnet .",
+    "docker:run": "docker run -p 8080:8080 -v ./results:/app/results controlnet"
+  }
+}

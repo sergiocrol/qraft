@@ -1,0 +1,64 @@
+services:
+  # Controlnet service
+  controlnet:
+    build:
+      context: ./apps/controlnet
+      dockerfile: Dockerfile
+      args:
+        - MODEL_ARG=${MODEL:-digiplay/GhostMixV1.2VAE}
+        - CONTROLNET_MODEL_ARG=${CONTROLNET_MODEL:-monster-labs/control_v1p_sd15_qrcode_monster}
+        - CONTROLNET_TWO_MODEL_ARG=${CONTROLNET_TWO_MODEL:-latentcat/control_v1p_sd15_brightness}
+        - RESULTS_DIR_ARG=${RESULTS_DIR:-/tmp/results}
+        - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+        - AWS_REGION=${AWS_REGION:-eu-west-1}
+    container_name: qr-controlnet-api
+    ports:
+      - "8080:8080"
+    environment:
+      - MODEL=${MODEL:-digiplay/GhostMixV1.2VAE}
+      - CONTROLNET_MODEL=${CONTROLNET_MODEL:-monster-labs/control_v1p_sd15_qrcode_monster}
+      - CONTROLNET_TWO_MODEL=${CONTROLNET_TWO_MODEL:-latentcat/control_v1p_sd15_brightness}
+      - DEVICE=${DEVICE:-cuda}
+      - RESULTS_DIR=${RESULTS_DIR:-/tmp/results}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DEBUG=${DEBUG:-False}
+      - NUM_INFERENCE_STEPS=${NUM_INFERENCE_STEPS:-30}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION:-eu-west-1}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+    env_file:
+      - ./apps/controlnet/.env
+    volumes:
+      - controlnet_results:/tmp/results
+      - controlnet_cache:/root/.cache
+      - ./apps/controlnet/app/qrs:/opt/program/qrs:ro
+    networks:
+      - qr-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  controlnet_results:
+    driver: local
+  controlnet_cache:
+    driver: local
+
+networks:
+  qr-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

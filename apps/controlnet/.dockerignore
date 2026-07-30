@@ -1,0 +1,21 @@
+# Keep secrets, local envs, virtualenvs, caches and test assets out of the
+# build context so `COPY . /opt/program/` never bakes them into the image.
+.env
+.env.*
+!.env.example
+
+venv/
+.venv*/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.cache/
+.huggingface/
+
+tests/
+eval/
+results/
+*.log
+*.tar.gz
+deployment_info*.json
+.DS_Store
