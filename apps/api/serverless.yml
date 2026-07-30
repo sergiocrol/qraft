@@ -66,6 +66,10 @@ provider:
   # IAM permissions for accessing SageMaker and S3
   iamRoleStatements:
     - Effect: Allow
+      Action: execute-api:Invoke
+      Resource: arn:aws:execute-api:${aws:region}:${aws:accountId}:${env:RELAY_API_ID}/*
+      
+    - Effect: Allow
       Action:
         - sagemaker:InvokeEndpoint
         - sagemaker:InvokeEndpointAsync
