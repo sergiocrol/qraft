@@ -18,12 +18,12 @@
 </p>
 
 <p align="center">
-  <a href="https://d2od1bio0etyqy.cloudfront.net/">
+  <a href="https://qraft-ai.netlify.app/">
     <img src="docs/app-screenshot.png" alt="Qraft.ai — artistic QR code generator" width="720" />
   </a>
 </p>
 
-> **[Try the live demo](https://d2od1bio0etyqy.cloudfront.net/)** — the GPU fleet scales to zero when idle, so if the engine is asleep you can request activation from the site (a human approves it; [more on that below](#scaling-and-cost-engineering)).
+> **[Try the live demo](https://qraft-ai.netlify.app/)** — the GPU fleet scales to zero when idle, so if the engine is asleep you can request activation from the site (a human approves it; [more on that below](#scaling-and-cost-engineering)).
 
 <p align="center">
   <img src="docs/examples/art.png" alt="Art" width="200" />
@@ -60,7 +60,7 @@ Five things worth stealing from this codebase:
 - [The generation engine](#the-generation-engine)
   - [Why QR codes are hard for diffusion models](#why-qr-codes-are-hard-for-diffusion-models)
   - [The models](#the-models)
-  - [Pipeline v2 — scannable by construction](#pipeline-v2--scannable-by-construction)
+  - [The pipeline — scannable by construction](#the-pipeline--scannable-by-construction)
   - [Scan verification](#scan-verification)
   - [The repair ladder](#the-repair-ladder)
   - [Style presets](#style-presets)
@@ -87,10 +87,10 @@ The deployed site exposes a few flavors of the same app:
 
 | Route                         | What it is                                                                         |
 | ----------------------------- | ---------------------------------------------------------------------------------- |
-| `/`                           | The public generator — v2 pipeline against the production GPU endpoint             |
+| `/`                           | The public generator, against the production GPU endpoint                          |
 | `/j/<jobId>`                  | Result/processing page for a job (shareable; polling is token-guarded)             |
-| `/staging`, `/staging/j/<id>` | Same UI pointed at the **staging** endpoint, legacy v1 pipeline                    |
-| `/lab`                        | v2 pipeline against staging — where new pipeline work is validated                 |
+| `/staging`, `/staging/j/<id>` | Same UI pointed at the **staging** endpoint                                        |
+| `/lab`                        | Engine playground against staging — where pipeline changes prove themselves        |
 | `/admin`                      | Operations panel: endpoint status, scale up/down, GPU hardware selector, job stats |
 
 Everything below the form is asynchronous: no request ever waits on a GPU synchronously, and no visitor can call the scaling API directly — capacity is driven by queued work and capped at a small maximum.
@@ -160,7 +160,7 @@ flowchart TB
 
 | Layer               | Path                                                             | Stack                                                                                                   | Deployed as                                                                          |
 | ------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| **Frontend**        | [`apps/client/`](apps/client/)                                   | Astro + React islands, Tailwind                                                                         | Static build on S3 behind CloudFront                                                 |
+| **Frontend**        | [`apps/client/`](apps/client/)                                   | Astro + React islands, Tailwind                                                                         | Static build — S3 + CloudFront, or Netlify (serves the public demo)                  |
 | **API**             | [`apps/api/`](apps/api/)                                         | Express (runs identically as local server and Lambda), aws-sdk, Zod                                     | Lambda + HTTP API via Serverless Framework, plus a cron Lambda                       |
 | **ML inference**    | [`apps/controlnet/`](apps/controlnet/)                           | Python/Flask, PyTorch 2.6, diffusers, transformers                                                      | SageMaker-compatible Docker image (`/ping`, `/invocations`) on an **async** endpoint |
 | **Relay**           | [`apps/controlnet/app/lambda.py`](apps/controlnet/app/lambda.py) | Plain boto3 Lambda                                                                                      | Hand-managed function behind its own API Gateway (`make deploy-relay-lambda`)        |
@@ -238,7 +238,7 @@ stateDiagram-v2
 
 ### Why QR codes are hard for diffusion models
 
-A QR code is a rigid black-and-white grid with strict local contrast requirements; a diffusion model wants to paint. Left alone, Stable Diffusion will happily smear the finder patterns into clouds. The classic fix is **ControlNet conditioning** — but one ControlNet is not enough: the structure net alone produces scannable-but-flat images, and turning it down produces beautiful-but-dead codes. Qraft runs **two ControlNets simultaneously**, and (in the v2 pipeline) closes the loop with actual QR decoders that verify and repair every image.
+A QR code is a rigid black-and-white grid with strict local contrast requirements; a diffusion model wants to paint. Left alone, Stable Diffusion will happily smear the finder patterns into clouds. The classic fix is **ControlNet conditioning** — but one ControlNet is not enough: the structure net alone produces scannable-but-flat images, and turning it down produces beautiful-but-dead codes. Qraft runs **two ControlNets simultaneously**, and closes the loop with actual QR decoders that verify and repair every image.
 
 ### The models
 
@@ -254,9 +254,9 @@ The Docker image (PyTorch 2.6 / CUDA 12.4) bakes in only the two ControlNets —
 
 Everything runs fp16 on a single GPU (~10 GB VRAM for the dual-ControlNet pipe), with the DPM++ 2M Karras scheduler by default and `max_concurrent_invocations_per_instance = 1` — one generation owns the GPU at a time.
 
-### Pipeline v2 — scannable by construction
+### The pipeline — scannable by construction
 
-Two pipelines coexist behind one request field. `pipeline: "v1"` (the default when absent) is the legacy path: condition directly on the uploaded QR image at 1024², attach scan metadata, ship. The public site runs **`pipeline: "v2"`** (plan 008), which restructures generation around one idea: _never condition on a photo of a QR code when you can condition on the QR code itself._
+The whole pipeline (plan 008) is organized around one idea: _never condition on a photo of a QR code when you can condition on the QR code itself._
 
 ```mermaid
 flowchart TB
@@ -305,8 +305,8 @@ flowchart TB
 
 Stage by stage:
 
-- **Stage 0 — canonicalization.** The client sends the QR's _text payload_ (`qrContent`), and the container renders a pristine QR from it: smallest version ≤ 8 that fits, the highest error-correction level the version allows (never L), pixel-perfect module edges. If only an image is available, it's decoded and re-rendered. The ControlNet then sees an ideal conditioning signal instead of an anti-aliased upload. If nothing is canonicalizable, the request degrades gracefully to the v1 path.
-- **Stage 1 — generation at 768².** SD 1.5's native regime (1024² asks the checkpoint to extrapolate). At 768 the structure net needs less force, which buys back artistic freedom. Parameters are owned by the style preset here — user sliders rule only in v1.
+- **Stage 0 — canonicalization.** The client sends the QR's _text payload_ (`qrContent`), and the container renders a pristine QR from it: smallest version ≤ 8 that fits, the highest error-correction level the version allows (never L), pixel-perfect module edges. If only an image is available, it's decoded and re-rendered. The ControlNet then sees an ideal conditioning signal instead of an anti-aliased upload. If nothing is canonicalizable, the engine degrades gracefully and conditions directly on the uploaded QR image.
+- **Stage 1 — generation at 768².** SD 1.5's native regime (1024² asks the checkpoint to extrapolate). At 768 the structure net needs less force, which buys back artistic freedom. Parameters here are owned by the style preset — see [Style presets](#style-presets) for why.
 - **Stage 2 — verification** (below).
 - **Stage 3 — the repair ladder** (below), only for images that failed verification.
 - **Stage 4 — hires.** An img2img ×1.5 upscale (768 → 1152) at strength 0.40 with both ControlNets re-applied at 0.8× the preset scales, conditioned on the canonical QR NEAREST-upscaled to match. The upscale is accepted **only if it doesn't degrade the scan verdict** — otherwise the verified 768 image ships and the metadata says `hires_dropped: true`. Scannability always outranks resolution.
@@ -321,8 +321,7 @@ Every generated image is scored by the two strongest open-source decoders — Op
   "scan_score": 0.83,
   "decoders_passed": ["wechat", "zxing"],
   "repair_stage_used": null,
-  "pipeline": "v2",
-  "style_preset": "illustration",
+  "style_preset": "none",
   "seed": 12346
 }
 ```
@@ -331,19 +330,19 @@ Three strictness levels (`relaxed` / `standard` / `strict`) set which decoders m
 
 ### The repair ladder
 
-When a v2 image fails verification, a bounded ladder runs — cheapest rung first, re-verifying after each, stopping at the first success, all under a **90-second wall-clock budget** per image:
+When an image fails verification, a bounded ladder runs — cheapest rung first, re-verifying after each, stopping at the first success, all under a **90-second wall-clock budget** per image:
 
 | Rung | Technique              | Cost                  | Idea                                                                                                                                                                                                 |
 | ---- | ---------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | a    | **Module blend**       | CPU, milliseconds     | Compare the image against the canonical QR module-by-module; nudge the luminance of only the failing modules toward legibility                                                                       |
-| b    | **Latent SRPG repair** | GPU, one img2img pass | Re-noise to strength 0.40 and re-denoise for 40 steps under Scanning-Robust Perceptual Guidance (after DiffQRCoder, WACV 2025), with an optional SR-MPGD latent polish behind `V2_SRMPGD_ITERATIONS` |
+| b    | **Latent SRPG repair** | GPU, one img2img pass | Re-noise to strength 0.40 and re-denoise for 40 steps under Scanning-Robust Perceptual Guidance (after DiffQRCoder, WACV 2025), with an optional SR-MPGD latent polish behind a feature flag |
 | c    | **Directed re-roll**   | GPU, full generation  | Regenerate with the structure ControlNet bumped +0.15 (capped at 1.65) and a decorrelated seed — trade beauty for readability, but only when asked                                                   |
 
 The ladder never returns an image that scans _worse_ than what entered it: best-so-far wins.
 
 ### Style presets
 
-In v2 the preset — not the user — owns conditioning scales, guidance windows, step count and checkpoint. Values are research-seeded (qrcode-monster model card, DiffQRCoder, Anthony Fu's QR-code writings) and tuned against the eval harness:
+A preset owns everything that shapes a look: base checkpoint, both conditioning scales, both guidance windows, step count, guidance scale, and a prompt scaffold wrapped around the user's prompt. Values are research-seeded (qrcode-monster model card, DiffQRCoder, Anthony Fu's QR-code writings) and tuned against the eval harness:
 
 | Preset         | Checkpoint      | Structure scale | Brightness scale (window) | Prompt scaffold                                                                                                      |
 | -------------- | --------------- | --------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -355,6 +354,11 @@ In v2 the preset — not the user — owns conditioning scales, guidance windows
 | `none`         | request default | 1.35            | 0.25 (30–90%)             | passthrough                                                                                                          |
 
 The common thread: the structure net runs the **full** denoising window, while the brightness net joins late and leaves early — enough to keep global contrast, never enough to flatten the art.
+
+Two honest caveats about how presets meet the real world:
+
+- **The preset overrides the request, by design.** The validation schema fills absent numeric fields with defaults, so by the time a request reaches the GPU the container cannot tell "the caller chose 30 steps" from "the schema default filled it in". Rather than guess, the engine gives the preset authority over scales, windows, steps and guidance; the request keeps control of the checkpoint (when the preset doesn't pin one), sampler, seed, image count and the prompt-enhancement toggle.
+- **The UI has no preset picker yet.** `stylePreset` is an API-level field the public form never sends, so every site generation resolves to the `none` preset — the engine-tuned defaults in the last row above, no prompt scaffold, and the visitor's checkpoint choice from the Advanced panel honored. The five named looks are reachable only by API callers today; surfacing them as one-tap styles in the form is the natural next step for the UI.
 
 ### LLM prompt enhancement
 
@@ -370,20 +374,21 @@ The engineering constraints are stricter than the model choice:
 
 ### Parameter cheat sheet
 
-What actually gets sent, and by whom:
+What the public form sends versus what the engine actually runs — every delta is the preset doing its job ([why](#style-presets)):
 
-| Parameter                       | Container default (v1) | Public form sends | v2 preset overrides?                       |
-| ------------------------------- | ---------------------- | ----------------- | ------------------------------------------ |
-| `controlnet_conditioning_scale` | `[1.25, 0.1]`          | `[1.0, 0.1]`      | ✅ per preset (1.30–1.45 / 0.20–0.30)      |
-| `control_guidance_start / end`  | `[0, 0.1]` / `[1, 1]`  | same              | ✅ monster full-window, brightness ~30–90% |
-| `num_inference_steps`           | 30                     | 40                | ✅ 36                                      |
-| `guidance_scale`                | 7.0                    | 8.5               | ✅ 7.0                                     |
-| `sampler`                       | `dpm++_2m_karras`      | same              | —                                          |
-| `width × height`                | 1024²                  | 1024²             | ✅ clamped to 768², hires to 1152²         |
-| `num_images_per_prompt`         | —                      | 3                 | —                                          |
-| `prompt_enhancement`            | off                    | **on**            | —                                          |
+| Parameter                       | Public form sends     | The engine runs                       | Decided by |
+| ------------------------------- | --------------------- | ------------------------------------- | ---------- |
+| `controlnet_conditioning_scale` | `[1.0, 0.1]`          | `[1.35, 0.25]`                        | preset     |
+| `control_guidance_start / end`  | `[0, 0.1]` / `[1, 1]` | structure 0–100% · brightness 30–90%  | preset     |
+| `num_inference_steps`           | 40                    | 36                                    | preset     |
+| `guidance_scale`                | 8.5                   | 7.0                                   | preset     |
+| `model`                         | visitor's choice      | as requested                          | request    |
+| `sampler`                       | `dpm++_2m_karras`     | as requested                          | request    |
+| `width × height`                | 1024²                 | 768², hires to 1152²                  | pipeline   |
+| `num_images_per_prompt`         | 3                     | 3                                     | request    |
+| `prompt_enhancement`            | **on** (default)      | as requested                          | request    |
 
-Reading the two scales: the first number is the structure net — **up = more scannable, down = more artistic**. The second is the brightness net, kept subtle (≈ 0.1–0.3) because it can wash out an image fast. In v1, multi-image requests explore: the first images use your scales, later ones sample alternative pairs (`[1.45, 0.1]`, `[1.0, 0.15]`, …) for variety.
+Reading the two scales: the first number is the structure net — **up = more scannable, down = more artistic**. The second is the brightness net, kept subtle (≈ 0.1–0.3) because it can wash out an image fast.
 
 ---
 
@@ -467,7 +472,7 @@ The visual layer is a bespoke design system ("Gallery, Alive"): warm riso palett
 
 Notable components:
 
-- **`GenerationForm`** — URL + prompt + the "enhance my prompt" toggle, with an Advanced panel exposing every knob the API accepts (model, sampler, steps, both ControlNet scales and windows, guidance, seed). It renders the QR variations client-side (no URL ever leaves the browser as plain text to a QR service) and uploads them before submitting.
+- **`GenerationForm`** — URL + prompt + the "enhance my prompt" toggle, with an Advanced panel exposing every knob the API accepts (model, sampler, steps, both ControlNet scales and windows, guidance, seed — the engine honors some and overrides others; see the [parameter cheat sheet](#parameter-cheat-sheet)). It renders the QR variations client-side (no URL ever leaves the browser as plain text to a QR service) and uploads them before submitting.
 - **`WakeEndpointForm`** — the scale-from-zero UX: explains that the engine is asleep, collects an email, fires the activation request.
 - **`ProcessingView`** — polls the job and rotates through **real examples** (`/api/gallery/examples` joins past payload JSONs with their output images in S3) so the wait shows what's possible instead of a bare spinner ([see it](docs/generation.png)).
 - **`ResultDisplay`** — the artworks with scan-verified metadata and downloads (fetched `cache: 'no-store'` to dodge a subtle CORS cache-poisoning trap — see [Limitations](#limitations-and-known-issues)).
@@ -489,9 +494,9 @@ All ops go through the root [`Makefile`](Makefile) — `make help` lists everyth
 
 ```mermaid
 flowchart LR
-    subgraph GPUrel["make release IMAGE_VERSION=v2.1.0"]
+    subgraph GPUrel["make release IMAGE_VERSION=vX.Y.Z"]
         direction LR
-        T["re-tag current :latest<br/>as rollback-YYYYMMDD-HHMMSS"] --> BLD["docker build<br/>(linux/amd64)"] --> PUSH["push :v2.1.0 + :latest<br/>to ECR"] --> UPD["deploy_sagemaker.py --update-only<br/>blue/green endpoint update"]
+        T["re-tag current :latest<br/>as rollback-YYYYMMDD-HHMMSS"] --> BLD["docker build<br/>(linux/amd64)"] --> PUSH["push :vX.Y.Z + :latest<br/>to ECR"] --> UPD["deploy_sagemaker.py --update-only<br/>blue/green endpoint update"]
     end
 
     subgraph JSrel["make deploy-api · make deploy-client"]
@@ -508,7 +513,7 @@ flowchart LR
 
 - **GPU container**: `make deploy-sagemaker` (full create) or `make release IMAGE_VERSION=vX.Y.Z` (versioned blue/green update of the live endpoint — zero downtime). Every release first re-tags the current `:latest` as a `rollback-<timestamp>` image, so `make rollback ROLLBACK_TAG=…` is always one command. Staging variants exist for everything (`deploy-sagemaker-staging`, `release-staging`, …). Fresh endpoints scale themselves to 0 right after deploy.
 - **API**: `make deploy-api` — Serverless Framework provisions the HTTP API, both Lambdas, the DynamoDB table and IAM. Secrets resolve from SSM at deploy time.
-- **Client**: `make deploy-client` — Astro build synced to S3. The cache strategy is the deployment mechanism: hashed assets are immutable for a year, HTML always revalidates, so CloudFront needs **no invalidations** — fresh HTML simply points at fresh hashes. Corollary: never serve an un-hashed asset from a stable URL.
+- **Client**: `make deploy-client` — Astro build synced to S3. The cache strategy is the deployment mechanism: hashed assets are immutable for a year, HTML always revalidates, so CloudFront needs **no invalidations** — fresh HTML simply points at fresh hashes. Corollary: never serve an un-hashed asset from a stable URL. The public demo at [qraft-ai.netlify.app](https://qraft-ai.netlify.app/) ships the same build via `make deploy-client-netlify` — `netlify.toml` mirrors the exact cache strategy, so both hosts behave identically.
 - **Relay Lambda**: hand-managed on purpose (it changes rarely and gates the GPU): `make deploy-relay-lambda` zips `app/lambda.py` and updates the function. Because it whitelists fields, adding a container parameter means updating it too — the Makefile documents the drift-check procedure.
 - **Models**: `make upload-sd-models` pushes all nine SD checkpoints to S3; `make upload-llm-model` does the same for the prompt-enhancer weights.
 
@@ -587,7 +592,7 @@ qraft/
 │       │   ├── schemas/        # marshmallow request validation
 │       │   ├── services/       # inference.py · prompt_enhancer.py · latent_repair.py
 │       │   ├── utils/          # scan_verifier · qr_canonical · module_repair · url_guard…
-│       │   ├── presets.py      # v2 style presets
+│       │   ├── presets.py      # style presets
 │       │   └── lambda.py       # relay Lambda source (hand-deployed, field whitelist)
 │       ├── eval/               # QR quality eval harness (make eval-qr)
 │       ├── tests/              # CPU-only pytest suite
@@ -605,7 +610,7 @@ qraft/
 └── Makefile                    # every dev/build/deploy/ops command (make help)
 ```
 
-The [`plans/`](plans/) directory is the project's engineering log: each numbered document is the design for a shipped slice (job submission, auth lockdown, SSRF hardening, validation alignment, wake flow, the v2 quality pipeline, prompt enhancement).
+The [`plans/`](plans/) directory is the project's engineering log: each numbered document is the design for a shipped slice (job submission, auth lockdown, SSRF hardening, validation alignment, wake flow, the quality pipeline, prompt enhancement).
 
 ---
 
@@ -613,7 +618,7 @@ The [`plans/`](plans/) directory is the project's engineering log: each numbered
 
 - **Cold starts are real.** 0 → 1 instance is ~3–4 minutes (provisioning + image pull + S3 model sync + warmup), and wake needs a human approval on top. The UX embraces it rather than hiding it.
 - **QR density matters.** Long URLs mean denser grids and less room for art. The canonicalizer caps content at 90 chars / version 8; short URLs give the best results.
-- **Beauty and scannability still trade off.** v2's verify-and-repair raises the floor substantially, but a `strict`-level guarantee costs more repair time, and some prompt/preset combinations still ship as "beautiful, scans on the second try". The per-image `scan_score` tells you which ones.
+- **Beauty and scannability still trade off.** Verify-and-repair raises the floor substantially, but a `strict`-level guarantee costs more repair time, and some prompt/preset combinations still ship as "beautiful, scans on the second try". The per-image `scan_score` tells you which ones.
 - **g5 capacity droughts.** eu-west-1 sometimes cannot provision `ml.g5.xlarge` during the day (the failure is silent: desired=1, current=0, no error anywhere). That's exactly why the admin hardware selector and the g4dn fallback exist.
 - **The relay Lambda is hand-deployed.** It's tiny and changes rarely, but its field whitelist means new container parameters silently no-op in the cloud until `make deploy-relay-lambda` runs. The Makefile documents the drift check.
 - **S3 image caching is aggressive.** Outputs are immutable and cached for a year; the download button fetches with `cache: 'no-store'` because a non-CORS `<img>` response cached by the browser would otherwise poison the CORS fetch that downloads the file. If you build on this bucket, keep `Vary: Origin` in mind.
@@ -624,7 +629,7 @@ The [`plans/`](plans/) directory is the project's engineering log: each numbered
 
 This project stands on the open-source AI community:
 
-- **[Stable Diffusion QR Code 101](https://antfu.me/posts/ai-qrcode-101)** by Anthony Fu — the primer on ControlNet QR generation, and the source of several v2 conditioning-window ideas.
+- **[Stable Diffusion QR Code 101](https://antfu.me/posts/ai-qrcode-101)** by Anthony Fu — the primer on ControlNet QR generation, and the source of several conditioning-window ideas.
 - **[LogoNet: an AWS-powered application running ControlNet on SageMaker Async Endpoints](https://francescopochetti.com/logonet-the-journey-to-an-aws-powered-cloud-application-running-controlnet-on-sagemaker-async-endpoints/)** by Francesco Pochetti — the blueprint for the async-endpoint, scale-to-zero architecture used here.
 - **[DiffQRCoder](https://arxiv.org/abs/2409.06355)** (WACV 2025) — Scanning-Robust Perceptual Guidance, the research behind the latent repair rung.
 - **[monster-labs/control_v1p_sd15_qrcode_monster](https://huggingface.co/monster-labs/control_v1p_sd15_qrcode_monster)** and **[latentcat/control_v1p_sd15_brightness](https://huggingface.co/latentcat/control_v1p_sd15_brightness)** — the two ControlNets doing the heavy lifting.
@@ -633,5 +638,5 @@ This project stands on the open-source AI community:
 ---
 
 <p align="center">
-  <a href="https://d2od1bio0etyqy.cloudfront.net/"><b>Try the live demo</b></a> · built by <a href="https://www.linkedin.com/in/sergio-cordero-rol/">Sergio Cordero</a>
+  <a href="https://qraft-ai.netlify.app/"><b>Try the live demo</b></a> · built by <a href="https://www.linkedin.com/in/sergio-cordero-rol/">Sergio Cordero</a>
 </p>
