@@ -43,7 +43,11 @@ echo "✅ Found dist/ folder with built files"
 # problem to work around (unlike the S3 + long-TTL setup) — one command ships
 # the whole dist/ and flips the live version once the upload finishes.
 echo "📤 Uploading to Netlify (production)..."
-npx netlify-cli deploy --prod --dir dist
+# --no-build: this script already built dist/ above; skip Netlify's own build
+# pipeline (which, when a site has a UI build command from `netlify init`, would
+# rebuild AND resolve --dir relative to the repo root instead of apps/client).
+# Absolute --dir removes any base-directory ambiguity.
+npx netlify-cli deploy --prod --no-build --dir "$SCRIPT_DIR/dist"
 
 echo ""
 echo "🎉 Deployment Complete!"
