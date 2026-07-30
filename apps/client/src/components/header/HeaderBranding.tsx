@@ -45,7 +45,7 @@ export const HeaderBranding: React.FC<HeaderBrandingProps> = ({
           <Linkedin className="size-5" />
         </a>
         <a
-          href="https://github.com/sergiocrol"
+          href="https://github.com/sergiocrol/qraft"
           target="_blank"
           rel="noopener noreferrer"
           className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink bg-paper text-ink transition-colors hover:bg-yellow"
