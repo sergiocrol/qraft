@@ -284,56 +284,6 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
         </div>
       </div>
 
-      {/* v2 only: the v1 lane ignores presets entirely, so offering them
-          there would be a control that silently does nothing. */}
-      {pipeline === 'v2' && (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            {/* No htmlFor: a radiogroup is a div, not a labelable control. */}
-            <FieldLabel>
-              <span id="style-preset-label">Style</span>
-            </FieldLabel>
-            <span className="font-serif text-[13px] italic text-faint">
-              {stylePreset === 'none'
-                ? 'Your prompt is sent exactly as written'
-                : 'Adds styling words to your prompt'}
-            </span>
-          </div>
-          <div
-            role="radiogroup"
-            aria-labelledby="style-preset-label"
-            className="flex flex-wrap gap-2"
-          >
-            {STYLE_PRESET_OPTIONS.map((option) => {
-              const selected = stylePreset === option.value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  title={option.hint}
-                  onClick={() => !disabledInputs && updateField('stylePreset', option.value)}
-                  disabled={disabledInputs}
-                  className={cn(
-                    'rounded-[10px] border-2 border-ink px-3.5 py-2 text-left transition-colors',
-                    selected ? 'bg-yellow text-ink' : 'bg-paper text-muted hover:bg-cream',
-                    disabledInputs && 'cursor-not-allowed opacity-60'
-                  )}
-                >
-                  <span className="block text-[11px] font-bold uppercase tracking-[0.1em]">
-                    {option.label}
-                  </span>
-                  <span className="mt-0.5 block font-serif text-[12px] italic text-faint">
-                    {option.hint}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {uploadError && (
         <Alert variant="error">
           <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-red">Upload failed</p>
@@ -457,8 +407,42 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
           </div>
 
           <div className="space-y-4">
-            <SectionHeading color="bg-red">Model &amp; sampler</SectionHeading>
+            <SectionHeading color="bg-red">Style, model &amp; sampler</SectionHeading>
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              {/* v2 only: the v1 lane ignores presets entirely, so offering
+                  them there would be a control that silently does nothing. */}
+              {pipeline === 'v2' && (
+                <div className="space-y-2 md:col-span-2">
+                  <FieldLabel htmlFor="style-preset">Style</FieldLabel>
+                  <select
+                    id="style-preset"
+                    value={stylePreset}
+                    onChange={(e) =>
+                      updateField(
+                        'stylePreset',
+                        e.target.value as QRGenerationRequest['stylePreset']
+                      )
+                    }
+                    className="w-full rounded-[10px] border-2 border-ink bg-paper px-3 py-3 text-[15px] text-ink focus:border-blue focus:outline-none"
+                    disabled={disabledInputs}
+                  >
+                    {STYLE_PRESET_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label} — {option.hint}
+                      </option>
+                    ))}
+                  </select>
+                  {/* Says what the choice costs, not just what it looks like:
+                      every preset but "none" rewrites the prompt and takes
+                      over the model and the conditioning knobs below. */}
+                  <p className="font-serif text-[13px] italic text-faint">
+                    {stylePreset === 'none'
+                      ? 'Your prompt is sent exactly as written, and the settings below apply.'
+                      : 'Adds styling words to your prompt, and picks its own model, steps, guidance and conditioning — the fields below are ignored.'}
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <FieldLabel htmlFor="model">Model</FieldLabel>
                 <select
