@@ -47,7 +47,7 @@ export const JOB_POLL_INTERVAL_MS = 8_000;
 
 export const PROMPT_MIN_LENGTH = 30;
 
-export const DEFAULT_QR_PLACEHOLDER_URL = 'https://testsite.com/qr/ABC12EFD';
+export const DEFAULT_QR_PLACEHOLDER_URL = 'https://qraft.ai/e2e';
 
 export const ADMIN_TOKEN_STORAGE_KEY = 'adminToken';
 
@@ -90,7 +90,12 @@ export const FORM_DEFAULTS = {
   guidanceEnd2: DEFAULT_CONTROLNET_PARAMS.controlGuidanceEnd[1],
   negativePrompt: DEFAULT_CONTROLNET_PARAMS.negativePrompt,
   sampler: DEFAULT_CONTROLNET_PARAMS.sampler,
-  model: DEFAULT_CONTROLNET_PARAMS.model,
+  // DreamShaper rather than the shared default (epiCRealism). Measured with
+  // every other parameter held constant: a markedly better mean scan score
+  // across a fixed prompt set, ahead or level on every subject, and needing
+  // less work from the scan-repair ladder. Its painterly bias carries QR
+  // modules that epiCRealism's photorealism exposes as pasted-on.
+  model: 'dreamshaper',
   guidanceScale: 8.5,
   promptEnhancement: true,
 } as const;
