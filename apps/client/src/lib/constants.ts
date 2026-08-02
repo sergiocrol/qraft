@@ -95,7 +95,32 @@ export const FORM_DEFAULTS = {
   // across a fixed prompt set, ahead or level on every subject, and needing
   // less work from the scan-repair ladder. Its painterly bias carries QR
   // modules that epiCRealism's photorealism exposes as pasted-on.
+  //
+  // Set here rather than in the server-side preset table so that an explicit
+  // model choice in the request still wins.
   model: 'dreamshaper',
   guidanceScale: 8.5,
   promptEnhancement: true,
+  // Neutral by default. Every other preset prepends and appends a style
+  // scaffold to the user's own words, so defaulting to one would quietly
+  // rewrite "a photograph of my dog" into an illustration of it.
+  stylePreset: 'none',
 } as const;
+
+/**
+ * Styles offered by the v2 pipeline (server-side `app/presets.py`).
+ *
+ * Each preset picks a checkpoint AND wraps the prompt in a scaffold, so the
+ * hint text says what it will do to the user's words rather than pretending
+ * it is only a look. `none` is listed first because it is the honest default:
+ * it is the one preset with an empty scaffold, so the prompt is generated
+ * exactly as typed.
+ */
+export const STYLE_PRESET_OPTIONS = [
+  { value: 'none', label: 'Neutral', hint: 'Your prompt, untouched' },
+  { value: 'illustration', label: 'Illustration', hint: 'Storybook linework, rich colour' },
+  { value: 'photo', label: 'Photo', hint: 'Natural light, shallow depth of field' },
+  { value: 'cyberpunk', label: 'Cyberpunk', hint: 'Neon, rain-slick, high contrast' },
+  { value: 'watercolor', label: 'Watercolour', hint: 'Soft washes and paper texture' },
+  { value: 'architecture', label: 'Architecture', hint: 'Geometry, shadow, golden hour' },
+] as const;

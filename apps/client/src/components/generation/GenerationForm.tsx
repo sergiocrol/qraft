@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils/cn';
 import type { QRGenerationRequest } from '@/lib/api/types';
 import { generationService } from '@/services/GenerationService';
 
-import { PROMPT_MIN_LENGTH } from '@/lib/constants';
+import { PROMPT_MIN_LENGTH, STYLE_PRESET_OPTIONS } from '@/lib/constants';
 import { QR_VARIATION_CONFIGS } from '@/lib/qr/variationConfig';
 import type { QRVariation } from '@/lib/qr/types';
 import { useGenerationForm } from '@/hooks/useGenerationForm';
@@ -97,6 +97,7 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
     sampler,
     seed,
     showAdvanced,
+    stylePreset,
     uploadError,
     uploadingQR,
   } = state;
@@ -165,6 +166,8 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
         // schema bound, omit it and let the container fall back to decoding
         // baseQrCode[0].
         ...(pipeline ? { pipeline } : {}),
+        // Only meaningful on v2 — the v1 lane has no notion of presets.
+        ...(pipeline === 'v2' && stylePreset ? { stylePreset } : {}),
         ...(pipeline === 'v2' && qrUrl.length > 0 && qrUrl.length <= QR_CONTENT_MAX_LENGTH
           ? { qrContent: qrUrl }
           : {}),
@@ -280,6 +283,56 @@ export const GenerationForm: React.FC<GenerationFormProps> = ({
           </div>
         </div>
       </div>
+
+      {/* v2 only: the v1 lane ignores presets entirely, so offering them
+          there would be a control that silently does nothing. */}
+      {pipeline === 'v2' && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            {/* No htmlFor: a radiogroup is a div, not a labelable control. */}
+            <FieldLabel>
+              <span id="style-preset-label">Style</span>
+            </FieldLabel>
+            <span className="font-serif text-[13px] italic text-faint">
+              {stylePreset === 'none'
+                ? 'Your prompt is sent exactly as written'
+                : 'Adds styling words to your prompt'}
+            </span>
+          </div>
+          <div
+            role="radiogroup"
+            aria-labelledby="style-preset-label"
+            className="flex flex-wrap gap-2"
+          >
+            {STYLE_PRESET_OPTIONS.map((option) => {
+              const selected = stylePreset === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  title={option.hint}
+                  onClick={() => !disabledInputs && updateField('stylePreset', option.value)}
+                  disabled={disabledInputs}
+                  className={cn(
+                    'rounded-[10px] border-2 border-ink px-3.5 py-2 text-left transition-colors',
+                    selected ? 'bg-yellow text-ink' : 'bg-paper text-muted hover:bg-cream',
+                    disabledInputs && 'cursor-not-allowed opacity-60'
+                  )}
+                >
+                  <span className="block text-[11px] font-bold uppercase tracking-[0.1em]">
+                    {option.label}
+                  </span>
+                  <span className="mt-0.5 block font-serif text-[12px] italic text-faint">
+                    {option.hint}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {uploadError && (
         <Alert variant="error">

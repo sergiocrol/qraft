@@ -26,6 +26,10 @@ interface GenerationFormState {
   guidanceEnd2: number;
   seed: number | null;
   promptEnhancement: boolean;
+  // v2 only. "none" is the sole preset that leaves the prompt alone; the rest
+  // wrap it in a style scaffold, which is why this is a choice and not a
+  // default (see STYLE_PRESET_OPTIONS).
+  stylePreset: QRGenerationRequest['stylePreset'];
 }
 
 type FormAction =
@@ -58,6 +62,7 @@ const initialState: GenerationFormState = {
   guidanceEnd2: FORM_DEFAULTS.guidanceEnd2,
   seed: null,
   promptEnhancement: FORM_DEFAULTS.promptEnhancement,
+  stylePreset: FORM_DEFAULTS.stylePreset,
 };
 
 function generationFormReducer(
