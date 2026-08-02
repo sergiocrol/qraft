@@ -1,0 +1,30 @@
+# Root Netlify config.
+#
+# This file exists because apps/client/netlify.toml turns out NOT to be read:
+# the site's base directory is the repository root, so Netlify looks here.
+# (Proof, if it ever needs re-checking: that file declares immutable caching
+# for /_astro/*, and the live site serves those assets with Netlify's default
+# `max-age=0, must-revalidate` instead.)
+#
+# Only the build environment is set here. Build command, base and publish
+# directory continue to come from the Netlify UI, which is what the site has
+# always used; declaring them here as well would mean two places to keep in
+# step for no gain.
+
+[build.environment]
+  # Empty on purpose, and it must stay empty.
+  #
+  # An empty value leaves the client's axios baseURL relative, so every API
+  # call is same-origin and gets picked up by the proxy rule in
+  # apps/client/public/_redirects. That rule is what keeps the backend's host
+  # — and the account it is deployed under — out of the browser entirely.
+  #
+  # Putting an absolute URL back does not break the site, which is exactly
+  # what makes it easy to undo by accident: calls simply go direct again and
+  # the host reappears in every request and every devtools panel. The upstream
+  # belongs in public/_redirects; that is the single place it is written down.
+  #
+  # This is declared in the repo rather than left to the dashboard because a
+  # UI-set variable is invisible from here, and there is one set today that
+  # points straight at the backend. Without this line it wins every build.
+  PUBLIC_API_URL = ""

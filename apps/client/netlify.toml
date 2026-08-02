@@ -6,32 +6,23 @@
 # result is correct whether it is deployed by CLI or (optionally) by Netlify's
 # own git-connected build.
 #
-# NOTE: PUBLIC_API_URL is baked into the bundle at build time. For CLI deploys it
-# comes from apps/client/.env; for git-connected builds it comes from the block
-# below, which — per Netlify's precedence rules — overrides whatever is set in
-# the UI (Site settings → Environment variables).
+# WARNING: on the deployed site, THIS FILE IS NOT READ. Netlify resolves the
+# config from the base directory, which is the repository root, so the settings
+# that actually take effect live in /netlify.toml. You can see the difference
+# on the live site: the /_astro/* rule below is not applied to it.
+#
+# It is kept because the CLI deploy path (`make deploy-client-netlify`) runs
+# from this directory and does read it, and because it documents what the
+# client wants. Anything here that must hold for the deployed site has to be
+# duplicated in the root file — PUBLIC_API_URL="" is, deliberately, only there.
+#
+# NOTE: PUBLIC_API_URL is baked into the bundle at build time. For CLI deploys
+# it comes from apps/client/.env; for git-connected builds it comes from the
+# root netlify.toml. It must be empty in both, or the API proxy in
+# public/_redirects is bypassed and the backend host leaks into the page.
 
 [build]
   publish = "dist"
-
-  # Empty on purpose, and it must stay empty.
-  #
-  # An empty value leaves the axios baseURL relative, so every API call is
-  # same-origin and gets picked up by the proxy rule in public/_redirects. That
-  # rule is what keeps the backend's host — and the account it is deployed
-  # under — out of the browser entirely.
-  #
-  # Putting an absolute URL back here does not break the site, which is exactly
-  # what makes it easy to do by accident: calls simply go direct again and the
-  # host reappears in every request. Change the upstream in public/_redirects
-  # instead; it is the single place the backend URL is written down.
-  #
-  # The override is declared here rather than left to the dashboard because a
-  # UI-set variable is invisible from the repo, and there is one set today
-  # pointing straight at the backend — without this block it would win the
-  # next build and quietly undo the proxy.
-  [build.environment]
-    PUBLIC_API_URL = ""
 
 # Content-hashed assets (Astro emits these under /_astro/) never change contents
 # for a given URL, so they can be cached forever.
