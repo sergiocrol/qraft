@@ -1,0 +1,28 @@
+# Netlify rewrites. Copied verbatim into dist/ by Astro, so it applies to both
+# deploy paths (the CLI deploy in deploy-to-netlify.sh and a git-connected
+# Netlify build).
+#
+# The API lives on a different host from this site. Pointing PUBLIC_API_URL
+# straight at that host meant every request the page made — and every URL
+# visible in devtools, in the network panel and in any error message — carried
+# the backend's own domain, including the provider account it is deployed
+# under. Nothing about that is secret, but it is not this site's name, and a
+# visitor should not have to read someone's account slug to use a demo.
+#
+# A rewrite (status 200, not a 3xx redirect) fixes that completely: the browser
+# only ever addresses this site, and Netlify fetches the upstream server-side.
+# Method, body, query string and request headers are all forwarded, so POST
+# /api/qr-generation, DELETE /api/qr-generation/:id and the X-Job-Token header
+# behave exactly as they did on a direct call.
+#
+# This only works because the bundle is built with an EMPTY PUBLIC_API_URL,
+# which leaves the axios baseURL relative so requests land on these rules.
+# Setting PUBLIC_API_URL back to an absolute URL bypasses the proxy silently —
+# the site keeps working, it just leaks the host again. See netlify.toml.
+#
+# One behavioural consequence: the upstream now sees Netlify's egress address
+# on every request instead of the visitor's. Its per-IP rate limit therefore
+# reads X-NF-Client-Connection-IP, which Netlify adds here — see `_client_ip`
+# in apps/controlnet/modal_api.py.
+
+/api/*  https://sergio-crol--qraft-qr-api-api.modal.run/api/:splat  200
