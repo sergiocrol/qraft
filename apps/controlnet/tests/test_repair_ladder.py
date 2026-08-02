@@ -255,15 +255,16 @@ class TestLadderDispatch:
         assert len(model.pipe.calls) == 2
 
         reroll_call = model.pipe.calls[1]
-        # Monster scale bumped +0.15 from the preset (none: 1.35 -> 1.50),
+        # Monster scale bumped +0.15 from the preset (none: 1.4 -> 1.55),
         # brightness unchanged; same scaffolded prompt and canonical control.
-        assert reroll_call["controlnet_conditioning_scale"] == [1.50, 0.25]
+        # approx: the bump is computed as 1.4 + 0.15, which is not exactly 1.55.
+        assert reroll_call["controlnet_conditioning_scale"] == pytest.approx([1.55, 0.25])
         assert reroll_call["prompt"] == model.pipe.calls[0]["prompt"]
         assert reroll_call["image"][0].size == (768, 768)
 
         events = result["generations"][0]["repair_ladder"]
         assert [e["rung"] for e in events] == ["module_blend", "reroll"]
-        assert events[-1]["monster_scale"] == 1.50
+        assert events[-1]["monster_scale"] == pytest.approx(1.55)
 
     def test_monster_bump_is_capped_at_1_65(self, make_model, canonical):
         model = make_model([GRAY_768, canonical.image])
@@ -305,7 +306,7 @@ class TestLadderDispatch:
         assert recorded["pipe"] is sentinel_pipe
         assert recorded["kwargs"]["strength"] == pytest.approx(0.40)
         assert recorded["kwargs"]["num_inference_steps"] == 40
-        assert recorded["kwargs"]["monster_scale"] == pytest.approx(1.35)
+        assert recorded["kwargs"]["monster_scale"] == pytest.approx(1.4)
         assert recorded["kwargs"]["seed"] == 7
         events = result["generations"][0]["repair_ladder"]
         assert [e["rung"] for e in events] == ["module_blend", "latent_srpg"]

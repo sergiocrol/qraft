@@ -83,14 +83,14 @@ export const FORM_DEFAULTS = {
   numImagesPerPrompt: IMAGE_CONSTRAINTS.MAX_IMAGES_PER_PROMPT,
   numInferenceSteps: 40,
   // QR Monster conditioning. 1.0 is too weak to hold the code — the image
-  // wins and the modules dissolve. 1.35 is what the v2 style presets already
-  // use server-side, so this stops the slider from showing a number the
-  // pipeline disagrees with.
+  // wins and the modules dissolve. 1.4 is what the neutral v2 preset uses
+  // server-side, so this stops the slider from showing a number the
+  // pipeline disagrees with. Keep the two in step.
   //
   // It only *takes effect* on the v1 lane (/staging, and the fallback v2 takes
   // when a QR cannot be canonicalized): on v2 the preset owns the conditioning
   // scales and the request value is ignored.
-  controlnetScale1: 1.35,
+  controlnetScale1: 1.4,
   controlnetScale2: DEFAULT_CONTROLNET_PARAMS.controlnetConditioningScale[1],
   guidanceStart1: DEFAULT_CONTROLNET_PARAMS.controlGuidanceStart[0],
   guidanceStart2: DEFAULT_CONTROLNET_PARAMS.controlGuidanceStart[1],
