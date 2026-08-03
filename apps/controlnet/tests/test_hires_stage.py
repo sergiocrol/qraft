@@ -127,8 +127,8 @@ class TestHiresStage:
         assert call["height"] == 1152 and call["width"] == 1152
         assert call["strength"] == pytest.approx(0.40)
         assert call["num_inference_steps"] == 20
-        # Both CNs at 0.8x the preset (none: monster 1.4, brightness 0.25).
-        assert call["controlnet_conditioning_scale"] == pytest.approx([1.12, 0.20])
+        # Both CNs at 0.8x the preset (none: monster 1.3, brightness 0.25).
+        assert call["controlnet_conditioning_scale"] == pytest.approx([1.04, 0.20])
         assert call["control_guidance_start"] == [0.0, 0.30]
         assert call["control_guidance_end"] == [1.0, 0.90]
         # Init image is the 768 stage output; control is the upscaled canonical.

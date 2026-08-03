@@ -351,7 +351,7 @@ A preset owns everything that shapes a look: base checkpoint, both conditioning 
 | `cyberpunk`    | CyberRealistic  | 1.30            | 0.30 (25–85%)             | "…, neon lights, rain-slick streets, high contrast" — neon scenes carry QR structure naturally, so the lightest hand |
 | `watercolor`   | MeinaMix        | **1.45**        | 0.30 (30–95%)             | "delicate watercolor painting of …, soft washes" — soft washes blur module edges, needs the most structure           |
 | `architecture` | AbsoluteReality | 1.35            | 0.20 (35–90%)             | "dramatic architectural view of …, geometric facades, golden hour"                                                   |
-| `none`         | request default | 1.35            | 0.25 (30–90%)             | passthrough                                                                                                          |
+| `none`         | request default | 1.30            | 0.25 (30–90%)             | passthrough                                                                                                          |
 
 The common thread: the structure net runs the **full** denoising window, while the brightness net joins late and leaves early — enough to keep global contrast, never enough to flatten the art.
 
@@ -378,7 +378,7 @@ What the public form sends versus what the engine actually runs — every delta 
 
 | Parameter                       | Public form sends     | The engine runs                       | Decided by |
 | ------------------------------- | --------------------- | ------------------------------------- | ---------- |
-| `controlnet_conditioning_scale` | `[1.0, 0.1]`          | `[1.35, 0.25]`                        | preset     |
+| `controlnet_conditioning_scale` | `[1.3, 0.1]`          | `[1.3, 0.25]`                         | preset     |
 | `control_guidance_start / end`  | `[0, 0.1]` / `[1, 1]` | structure 0–100% · brightness 30–90%  | preset     |
 | `num_inference_steps`           | 40                    | 36                                    | preset     |
 | `guidance_scale`                | 8.5                   | 7.0                                   | preset     |
