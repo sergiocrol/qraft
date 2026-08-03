@@ -23,7 +23,7 @@
   </a>
 </p>
 
-> **[Try the live demo](https://qraft-ai.netlify.app/)** — the GPU fleet scales to zero when idle, so if the engine is asleep you can request activation from the site (a human approves it; [more on that below](#scaling-and-cost-engineering)).
+> **[Try the live demo](https://qraft-ai.netlify.app/)** — it runs the same container [deployed on Modal](#an-alternative-deployment-the-same-container-on-modal), which comes back from zero on its own, so there is nothing to wake. The AWS fleet it was built on also scales to zero, but takes three to four minutes and a human approval to come back ([more on that below](#scaling-and-cost-engineering)).
 
 <p align="center">
   <img src="docs/examples/art.png" alt="Art" width="200" />
@@ -71,6 +71,7 @@ Five things worth stealing from this codebase:
 - [Scaling and cost engineering](#scaling-and-cost-engineering)
 - [The frontend](#the-frontend)
 - [Environments and deployment](#environments-and-deployment)
+  - [An alternative deployment: the same container on Modal](#an-alternative-deployment-the-same-container-on-modal)
 - [Local development](#local-development)
 - [Testing and evaluation](#testing-and-evaluation)
 - [Repository layout](#repository-layout)
@@ -516,6 +517,19 @@ flowchart LR
 - **Client**: `make deploy-client` — Astro build synced to S3. The cache strategy is the deployment mechanism: hashed assets are immutable for a year, HTML always revalidates, so CloudFront needs **no invalidations** — fresh HTML simply points at fresh hashes. Corollary: never serve an un-hashed asset from a stable URL. The public demo at [qraft-ai.netlify.app](https://qraft-ai.netlify.app/) ships the same build via `make deploy-client-netlify` — `netlify.toml` mirrors the exact cache strategy, so both hosts behave identically.
 - **Relay Lambda**: hand-managed on purpose (it changes rarely and gates the GPU): `make deploy-relay-lambda` zips `app/lambda.py` and updates the function. Because it whitelists fields, adding a container parameter means updating it too — the Makefile documents the drift-check procedure.
 - **Models**: `make upload-sd-models` pushes all nine SD checkpoints to S3; `make upload-llm-model` does the same for the prompt-enhancer weights.
+
+### An alternative deployment: the same container on Modal
+
+Scale-to-zero on SageMaker buys $0 of idle GPU at the price of three to four minutes and a human approval every time someone shows up. That is the right trade for a fleet you operate; it is the wrong one for a link you send somebody. So the same GPU container also runs on [Modal](https://modal.com), which comes back from zero in well under a minute — and that is what the [live demo](https://qraft-ai.netlify.app/) is pointed at.
+
+What deliberately does **not** change is the engine. Two entrypoints deploy it: a GPU class that boots the very same Flask app and hands the request to its own `/invocations` through Flask's test client, and a CPU web endpoint that mirrors the job contract the client already speaks — the `{ success, data }` envelope, the `X-Job-Token` capability, submit-then-poll. No request mapping, preset table, repair ladder or scan gate is reimplemented, so the two deployments cannot drift in the only place it would matter: the images.
+
+What changes is everything around it.
+
+- **Weights come from the Hub, not S3.** A Modal Volume caches the checkpoints and both ControlNets across cold starts (`ENABLE_S3_MODEL_LOADING=False`), and results come back as base64 data URLs instead of presigned links. No bucket, no queue, no DynamoDB, no IAM — job state is a dictionary Modal keeps for you, and the entire backend is a GPU class plus a web endpoint.
+- **No wake screen.** The endpoint-status route reports `InService` permanently, because there is nothing to wake. The activation flow in [scaling and cost engineering](#scaling-and-cost-engineering) is a SageMaker concern only, and the client needs no code change to stop showing it — it believes the status route.
+- **Rate limits stand in for the human approval.** The endpoint is public and unauthenticated, and every accepted job is real GPU money (≈ $0.04 on an A10G), so the approval step becomes counters: 10 jobs per address per day, 60 globally, counted per UTC day and answered with `429` + `Retry-After`. The global cap is the one that actually bounds the bill; per-IP only raises the cost of casual abuse, since rotating addresses walks straight past it.
+- **The backend host stays out of the page.** The client is built with an empty `PUBLIC_API_URL`, which leaves its calls same-origin and relative, and [`_redirects`](apps/client/public/_redirects) rewrites `/api/*` to the Modal endpoint server-side — so the browser only ever addresses this site, and switching the demo between the two backends is one line in that file. One consequence worth knowing: the upstream then sees Netlify's egress address on every request, so the per-IP counter reads the visitor address Netlify forwards alongside it rather than the connecting one.
 
 ---
 
